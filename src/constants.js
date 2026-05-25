@@ -95,10 +95,10 @@ export const C = {
 }
 
 export const inputStyle = {
-  width: '100%', padding: '10px 12px', marginBottom: 8,
+  width: '100%', padding: '11px 14px', marginBottom: 10,
   background: 'rgba(255,255,255,0.06)',
   border: '1px solid rgba(255,255,255,0.12)',
-  borderRadius: 10, color: '#f1f5f9', fontSize: 15,
+  borderRadius: 12, color: '#f1f5f9', fontSize: 16,
   fontFamily: 'Sarabun, sans-serif', outline: 'none', boxSizing: 'border-box',
 }
 

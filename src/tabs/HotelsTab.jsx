@@ -98,10 +98,11 @@ export default function HotelsTab({ trip, hotels, uid, userName }) {
                   <div style={{ display: 'flex', gap: 4 }}>
                     {['❤️', '👍', '❌'].map(emoji => (
                       <button key={emoji} onClick={() => handleVote(h, emoji)} style={{
-                        padding: '4px 10px', borderRadius: 8, border: '1px solid',
+                        minWidth: 44, minHeight: 36, padding: '6px 10px',
+                        borderRadius: 10, border: '1.5px solid',
                         borderColor: h.votes?.[uid] === emoji ? trip.color : 'rgba(255,255,255,0.1)',
                         background: h.votes?.[uid] === emoji ? `${trip.color}33` : 'rgba(255,255,255,0.04)',
-                        cursor: 'pointer', fontSize: 14, transition: 'all 0.15s',
+                        cursor: 'pointer', fontSize: 16, transition: 'all 0.15s',
                       }}>{emoji}</button>
                     ))}
                   </div>

@@ -214,7 +214,7 @@ export function listenExpenses(tripId, callback) {
 // ── TIMELINE ──────────────────────────────────────────────────
 export async function logAction(tripId, { type, actor, summary, refId = '' }) {
   await addDoc(collection(db, 'trips', tripId, 'timeline'), {
-    type, actor, summary, refId, photoUrl, timestamp: ts(),
+    type, actor, summary, refId, timestamp: ts(),
   })
 }
 

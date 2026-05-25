@@ -141,10 +141,11 @@ export default function PlacesTab({ trip, places, uid, userName }) {
                     <span style={{ fontSize: 12, color: C.muted2, width: 40 }}>{m}</span>
                     {['❤️', '👍', '❌'].map(emoji => (
                       <button key={emoji} onClick={() => handleVote(p, emoji)} style={{
-                        padding: '3px 8px', borderRadius: 8, border: '1px solid',
+                        minWidth: 44, minHeight: 36, padding: '6px 10px',
+                        borderRadius: 10, border: '1.5px solid',
                         borderColor: p.votes?.[uid] === emoji ? trip.color : 'rgba(255,255,255,0.1)',
                         background: p.votes?.[uid] === emoji ? `${trip.color}33` : 'rgba(255,255,255,0.04)',
-                        cursor: 'pointer', fontSize: 13,
+                        cursor: 'pointer', fontSize: 16,
                       }}>{emoji}</button>
                     ))}
                     <span style={{ fontSize: 13 }}>{p.votes?.[m] || '—'}</span>

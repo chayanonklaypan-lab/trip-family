@@ -19,11 +19,11 @@ import TimelineTab   from './tabs/TimelineTab.jsx'
 import FAB           from './components/FAB.jsx'
 
 const TABS = [
-  { id: 'overview',  label: 'ภาพรวม' },
+  { id: 'overview',  label: '🗺️ ภาพรวม' },
   { id: 'hotels',    label: '🏨 ที่พัก' },
   { id: 'places',    label: '📍 สถานที่' },
   { id: 'expenses',  label: '💰 ค่าใช้จ่าย' },
-  { id: 'checklist', label: '📋 Checklist' },
+  { id: 'checklist', label: '📋 จัดของ' },
   { id: 'timeline',  label: '⏱️ Timeline' },
 ]
 
@@ -353,7 +353,8 @@ export default function App() {
     <div style={{
       minHeight: '100vh', maxWidth: 480, margin: '0 auto',
       background: '#0f172a', color: '#f1f5f9',
-      position: 'relative', paddingBottom: 80,
+      position: 'relative',
+      paddingBottom: 'calc(80px + env(safe-area-inset-bottom))',
     }}>
       {/* Header */}
       <div style={{
@@ -379,11 +380,19 @@ export default function App() {
             }}>🎞️ {memories.length}</div>
           )}
           <div onClick={() => setShowSettings(true)} style={{
-            background: 'rgba(255,255,255,0.06)', color: C.muted2,
+            background: myName ? 'rgba(255,255,255,0.06)' : 'rgba(251,191,36,0.15)',
+            color: myName ? C.muted2 : '#fbbf24',
             borderRadius: 20, padding: '6px 12px',
             fontSize: 13, cursor: 'pointer',
-            border: '1px solid rgba(255,255,255,0.1)',
-          }}>⚙️</div>
+            border: `1px solid ${myName ? 'rgba(255,255,255,0.1)' : 'rgba(251,191,36,0.4)'}`,
+            position: 'relative',
+          }}>
+            ⚙️{!myName && <span style={{
+              position: 'absolute', top: -3, right: -3,
+              width: 8, height: 8, borderRadius: '50%',
+              background: '#fbbf24', border: '2px solid #0f172a',
+            }} />}
+          </div>
           <div onClick={() => setShowCreate(true)} style={{
             background: `${tripColor}`, color: '#000',
             borderRadius: 20, padding: '6px 14px',
@@ -395,6 +404,23 @@ export default function App() {
           />
         </div>
       </div>
+
+      {/* Notification setup banner */}
+      {!myName && (
+        <div onClick={() => setShowSettings(true)} style={{
+          background: 'rgba(251,191,36,0.1)',
+          borderBottom: '1px solid rgba(251,191,36,0.2)',
+          padding: '10px 16px',
+          display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+        }}>
+          <span style={{ fontSize: 18 }}>🔔</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#fbbf24' }}>ตั้งค่าการแจ้งเตือน</div>
+            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>กดเพื่อเลือกชื่อและเปิดรับการแจ้งเตือน</div>
+          </div>
+          <span style={{ color: '#fbbf24', fontSize: 16 }}>→</span>
+        </div>
+      )}
 
       {/* Trip selector */}
       <div style={{ padding: '12px 16px 8px', overflowX: 'auto' }}>

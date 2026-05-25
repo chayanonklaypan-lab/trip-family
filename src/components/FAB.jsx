@@ -69,7 +69,9 @@ export default function FAB({ trip, places, uid, userName, color }) {
       {/* Bottom Sheet */}
       {open && (
         <div style={{
-          position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+          position: 'fixed',
+          bottom: 'calc(80px + env(safe-area-inset-bottom))',
+          left: '50%', transform: 'translateX(-50%)',
           width: '100%', maxWidth: 480, zIndex: 201,
           padding: '0 16px',
         }}>
@@ -168,14 +170,16 @@ export default function FAB({ trip, places, uid, userName, color }) {
 
       {/* FAB Button */}
       <button onClick={() => setOpen(!open)} style={{
-        position: 'fixed', bottom: 24, right: 20, zIndex: 202,
-        width: 56, height: 56, borderRadius: '50%',
+        position: 'fixed',
+        bottom: 'calc(24px + env(safe-area-inset-bottom))',
+        right: 20, zIndex: 202,
+        width: 60, height: 60, borderRadius: '50%',
         background: `linear-gradient(135deg, ${color}, ${color}bb)`,
         border: 'none', cursor: 'pointer',
-        fontSize: 28, fontWeight: 700, color: '#000',
-        boxShadow: `0 4px 20px ${color}66`,
+        fontSize: 30, fontWeight: 700, color: '#000',
+        boxShadow: `0 4px 24px ${color}77`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        transition: 'all 0.2s',
+        transition: 'transform 0.2s',
         transform: open ? 'rotate(45deg)' : 'rotate(0deg)',
       }}>+</button>
     </>
