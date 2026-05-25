@@ -73,21 +73,44 @@ function CreateModal({ onClose, onSave, color: defaultColor, uid, editData }) {
   const [form, setForm] = useState(editData ? {
     name: editData.name || '', img: editData.img || '✈️', color: editData.color || defaultColor || '#6366f1',
     start: editData.dates?.start || '', end: editData.dates?.end || '',
-    location: editData.location || '', members: (editData.members || []).filter(m => MEMBER_OPTIONS.includes(m)),
+    origin: editData.origin || '', location: editData.location || '',
+    members: (editData.members || []).filter(m => MEMBER_OPTIONS.includes(m)),
     carId: editData.car?.id || 'mg5', distance: editData.distance || '',
     fuelPrice: editData.fuelPrice || 42, budgetTotal: editData.budgetTotal || '',
     status: editData.status || 'วางแผน',
   } : {
     name: '', img: '✈️', color: defaultColor || '#6366f1',
-    start: '', end: '', location: '',
+    start: '', end: '', origin: '', location: '',
     members: [], carId: 'mg5',
     distance: '', fuelPrice: 42,
     budgetTotal: '', status: 'วางแผน',
   })
+  const [calcLoading, setCalcLoading] = useState(false)
 
   useEffect(() => {
     if (uid) getCarOdometer(uid).then(setOdometer)
   }, [uid])
+
+  const calcDistance = async () => {
+    if (!form.origin || !form.location || calcLoading) return
+    setCalcLoading(true)
+    try {
+      const headers = { 'User-Agent': 'TripFamilyApp/1.0' }
+      const [fromGeo, toGeo] = await Promise.all([
+        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(form.origin)}&format=json&limit=1`, { headers }).then(r => r.json()),
+        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(form.location)}&format=json&limit=1`, { headers }).then(r => r.json()),
+      ])
+      if (!fromGeo[0] || !toGeo[0]) { setCalcLoading(false); return }
+      const route = await fetch(
+        `https://router.project-osrm.org/route/v1/driving/${fromGeo[0].lon},${fromGeo[0].lat};${toGeo[0].lon},${toGeo[0].lat}?overview=false`
+      ).then(r => r.json())
+      const km = Math.round(route.routes[0].distance / 1000)
+      setForm(f => ({ ...f, distance: String(km) }))
+    } catch (e) {
+      console.error('calcDistance error:', e)
+    }
+    setCalcLoading(false)
+  }
 
   const car = CAR_OPTIONS.find(c => c.id === form.carId)
   const fuel = fuelCost(Number(form.distance), car?.efficiency, form.fuelPrice)
@@ -97,7 +120,7 @@ function CreateModal({ onClose, onSave, color: defaultColor, uid, editData }) {
     onSave({
       name: form.name, img: form.img, color: form.color,
       dates: { start: form.start, end: form.end },
-      location: form.location,
+      origin: form.origin, location: form.location,
       status: form.status, members: form.members,
       car: CAR_OPTIONS.find(c => c.id === form.carId),
       distance: Number(form.distance), fuelPrice: Number(form.fuelPrice),
@@ -153,7 +176,9 @@ function CreateModal({ onClose, onSave, color: defaultColor, uid, editData }) {
         <input placeholder="ชื่อทริป เช่น เชียงใหม่ มิ.ย. 69" value={form.name}
           onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={IS} />
 
-        <input placeholder="🌍 เมืองปลายทาง เช่น Chiang Mai, Thailand" value={form.location}
+        <input placeholder="📍 จุดเริ่มต้น เช่น กรุงเทพ, Bangkok" value={form.origin}
+          onChange={e => setForm(f => ({ ...f, origin: e.target.value }))} style={IS} />
+        <input placeholder="🏁 ปลายทาง เช่น Chiang Mai, Thailand" value={form.location}
           onChange={e => setForm(f => ({ ...f, location: e.target.value }))} style={IS} />
 
         <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>วันเริ่มต้น</div>
@@ -202,14 +227,21 @@ function CreateModal({ onClose, onSave, color: defaultColor, uid, editData }) {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
           <input type="number" placeholder="ระยะทาง (km)" value={form.distance}
             onChange={e => setForm(f => ({ ...f, distance: e.target.value }))}
-            style={{ ...IS, marginBottom: 0 }} />
-          <input type="number" placeholder="ราคาน้ำมัน ฿/L" value={form.fuelPrice}
-            onChange={e => setForm(f => ({ ...f, fuelPrice: e.target.value }))}
-            style={{ ...IS, marginBottom: 0 }} />
+            style={{ ...IS, marginBottom: 0, flex: 1 }} />
+          <button onClick={calcDistance} disabled={!form.origin || !form.location || calcLoading} style={{
+            padding: '10px 14px', borderRadius: 10, border: 'none', flexShrink: 0,
+            background: (form.origin && form.location) ? '#4285f4' : 'rgba(255,255,255,0.08)',
+            color: (form.origin && form.location) ? '#fff' : C.muted,
+            fontWeight: 700, fontSize: 13, cursor: (form.origin && form.location) ? 'pointer' : 'default',
+            fontFamily: 'Sarabun, sans-serif', whiteSpace: 'nowrap',
+          }}>{calcLoading ? '⏳' : '📍 คำนวณ'}</button>
         </div>
+        <input type="number" placeholder="ราคาน้ำมัน ฿/L" value={form.fuelPrice}
+          onChange={e => setForm(f => ({ ...f, fuelPrice: e.target.value }))}
+          style={{ ...IS, marginBottom: 8 }} />
 
         <input type="number" placeholder="งบประมาณรวม (บาท) เช่น 15000" value={form.budgetTotal}
           onChange={e => setForm(f => ({ ...f, budgetTotal: e.target.value }))} style={{ ...IS, marginTop: 8 }} />

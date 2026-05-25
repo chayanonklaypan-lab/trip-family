@@ -117,8 +117,12 @@ export default function OverviewTab({ trip, uid, onEdit }) {
             }}>✏️ แก้ไข</button>
           )}
         </div>
-        {trip.location && (
-          <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>📍 {trip.location}</div>
+        {(trip.origin || trip.location) && (
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>
+            {trip.origin && trip.location
+              ? `📍 ${trip.origin} → ${trip.location}`
+              : `📍 ${trip.origin || trip.location}`}
+          </div>
         )}
         <div style={{ color: C.muted, fontSize: 13, marginBottom: 14 }}>
           📅 {formatDate(trip.dates?.start)} – {formatDate(trip.dates?.end)} · {days} วัน
