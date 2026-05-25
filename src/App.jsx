@@ -129,6 +129,7 @@ function CreateModal({ onClose, onSave, color: defaultColor, uid, editData }) {
       const route = await fetch(
         `https://router.project-osrm.org/route/v1/driving/${fromGeo[0].lon},${fromGeo[0].lat};${toGeo[0].lon},${toGeo[0].lat}?overview=false`
       ).then(r => r.json())
+      if (!route.routes?.length) { setCalcLoading(false); return }
       const km = Math.round(route.routes[0].distance / 1000)
       setForm(f => ({ ...f, distance: String(km) }))
     } catch (e) {

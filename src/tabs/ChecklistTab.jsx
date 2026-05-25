@@ -47,6 +47,7 @@ export default function ChecklistTab({ trip, checklist, uid, userName }) {
   }
 
   const handleLoadTemplate = async (tpl) => {
+    if (!tpl.items?.length) { setShowTemplate(false); return }
     for (const item of tpl.items) {
       await addChecklistItem(trip.id, item)
     }

@@ -22,22 +22,22 @@ export default function HotelsTab({ trip, hotels, uid, userName }) {
   const handleAdd = async () => {
     if (!form.name || loading) return
     setLoading(true)
-    const id = await addHotel(trip.id, {
-      name: form.name,
-      price: Number(form.price) || 0,
-      link: form.link,
-    })
-    const summary = `${userName} เพิ่มที่พัก "${form.name}" ฿${form.price}/คืน`
-    await logAction(trip.id, {
-      type: 'hotel_added',
-      actor: userName,
-      summary,
-      refId: id,
-    })
-    notifyTripMembers(trip, userName, `[${trip.name}]\n${summary}`)
-    setForm({ name: '', price: '', link: '' })
-    setShowAdd(false)
-    setLoading(false)
+    try {
+      const id = await addHotel(trip.id, {
+        name: form.name,
+        price: Number(form.price) || 0,
+        link: form.link,
+      })
+      const summary = `${userName} เพิ่มที่พัก "${form.name}" ฿${form.price}/คืน`
+      await logAction(trip.id, { type: 'hotel_added', actor: userName, summary, refId: id })
+      notifyTripMembers(trip, userName, `[${trip.name}]\n${summary}`)
+      setForm({ name: '', price: '', link: '' })
+      setShowAdd(false)
+    } catch (e) {
+      console.error('handleAdd hotel error:', e)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const sorted = [...hotels].sort((a, b) => voteScore(b.votes) - voteScore(a.votes))
