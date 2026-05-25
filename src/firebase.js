@@ -8,6 +8,7 @@ import {
   getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
   onSnapshot, serverTimestamp, query, orderBy, where,
 } from 'firebase/firestore'
+import { getMessaging, getToken } from 'firebase/messaging'
 
 // ── Firebase config (จากแอปการเงิน) ──────────────────────────
 const firebaseConfig = {
@@ -22,6 +23,7 @@ const firebaseConfig = {
 const app            = initializeApp(firebaseConfig)
 export const auth    = getAuth(app)
 export const db      = getFirestore(app)
+const messaging      = getMessaging(app)
 
 // ── Auth ──────────────────────────────────────────────────────
 const provider = new GoogleAuthProvider()
@@ -79,48 +81,38 @@ export async function fetchWeather(city, startDate, days) {
   }
 }
 
-// ── Web Push Notifications ────────────────────────────────────
-const VAPID_PUBLIC_KEY = 'BFrZUYWJ8ecnePFiP5VMpdfK3MY61j74GqjhhuWRPVnXuY6_MuM3uZ5vrIKIVWiGe04NociqOmfON4erzaFrRvc'
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const raw = window.atob(base64)
-  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)))
-}
+// ── FCM Push Notifications ────────────────────────────────────
+// VITE_FCM_VAPID_KEY: Firebase Console → Project Settings → Cloud Messaging
+//   → Web configuration → Web Push certificates → Key pair value
+const FCM_VAPID_KEY = import.meta.env.VITE_FCM_VAPID_KEY
 
 export async function subscribePush(memberName) {
   try {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return false
     const permission = await Notification.requestPermission()
     if (permission !== 'granted') return false
     const reg = await navigator.serviceWorker.ready
-    let sub = await reg.pushManager.getSubscription()
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      })
-    }
-    await setDoc(doc(db, 'settings', 'pushSubs'), { [memberName]: sub.toJSON() }, { merge: true })
+    const token = await getToken(messaging, { vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg })
+    if (!token) return false
+    await setDoc(doc(db, 'settings', 'fcmTokens'), { [memberName]: token }, { merge: true })
     return true
   } catch (e) {
-    console.error('Push subscribe error:', e)
+    console.error('FCM subscribe error:', e)
     return false
   }
 }
 
 export async function notifyTripMembers(trip, actorName, body) {
   try {
-    const snap = await getDoc(doc(db, 'settings', 'pushSubs'))
-    const subs = snap.exists() ? snap.data() : {}
+    const snap = await getDoc(doc(db, 'settings', 'fcmTokens'))
+    const allTokens = snap.exists() ? snap.data() : {}
     const recipients = (trip.members || []).filter(m => m !== actorName)
-    const subscriptions = recipients.map(m => subs[m]).filter(Boolean)
-    if (!subscriptions.length) return
+    const tokens = recipients.map(m => allTokens[m]).filter(Boolean)
+    if (!tokens.length) return
     await fetch('/api/send-push', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subscriptions, title: trip.name, body }),
+      body: JSON.stringify({ tokens, title: trip.name, body }),
     })
   } catch (e) {
     console.error('Push notify error:', e)
