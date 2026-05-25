@@ -21,42 +21,43 @@ export default function PlacesTab({ trip, places, uid, userName }) {
   const handleVote = async (place, emoji) => {
     const prev = place.votes?.[uid]
     const newEmoji = prev === emoji ? null : emoji
-    await votePlace(trip.id, place.id, uid, newEmoji)
-    await logAction(trip.id, {
-      type: 'place_voted', actor: userName,
-      summary: `${userName} โหวต ${newEmoji || 'ยกเลิก'} "${place.name}"`,
-      refId: place.id,
-    })
+    try {
+      await votePlace(trip.id, place.id, uid, newEmoji)
+      await logAction(trip.id, {
+        type: 'place_voted', actor: userName,
+        summary: `${userName} โหวต ${newEmoji || 'ยกเลิก'} "${place.name}"`,
+        refId: place.id,
+      })
+    } catch (e) { console.error('vote place error:', e) }
   }
 
   const handleConfirm = async (place) => {
-    await confirmPlace(trip.id, place.id, !place.confirmed)
+    try { await confirmPlace(trip.id, place.id, !place.confirmed) }
+    catch (e) { console.error('confirm place error:', e) }
   }
 
   const handleCheckin = async (place) => {
     const newDone = !place.done
-    await checkInPlace(trip.id, place.id, newDone)
-    if (newDone) {
-      const summary = `${userName} เช็คอินที่ "${place.name}" ✅`
-      await logAction(trip.id, {
-        type: 'place_checkin', actor: userName,
-        summary, refId: place.id,
-      })
-      notifyTripMembers(trip, userName, `[${trip.name}]\n${summary}`)
-    }
+    try {
+      await checkInPlace(trip.id, place.id, newDone)
+      if (newDone) {
+        const summary = `${userName} เช็คอินที่ "${place.name}" ✅`
+        await logAction(trip.id, { type: 'place_checkin', actor: userName, summary, refId: place.id })
+        notifyTripMembers(trip, userName, `[${trip.name}]\n${summary}`)
+      }
+    } catch (e) { console.error('checkin place error:', e) }
   }
 
   const handleAdd = async () => {
     if (!form.name) return
-    const id = await addPlace(trip.id, { name: form.name, category: form.category, link: form.link })
-    const summary = `${userName} เพิ่มสถานที่ "${form.name}" (${form.category})`
-    await logAction(trip.id, {
-      type: 'place_added', actor: userName,
-      summary, refId: id,
-    })
-    notifyTripMembers(trip, userName, `[${trip.name}]\n${summary}`)
-    setForm({ name: '', category: 'เที่ยว', link: '' })
-    setShowAdd(false)
+    try {
+      const id = await addPlace(trip.id, { name: form.name, category: form.category, link: form.link })
+      const summary = `${userName} เพิ่มสถานที่ "${form.name}" (${form.category})`
+      await logAction(trip.id, { type: 'place_added', actor: userName, summary, refId: id })
+      notifyTripMembers(trip, userName, `[${trip.name}]\n${summary}`)
+      setForm({ name: '', category: 'เที่ยว', link: '' })
+      setShowAdd(false)
+    } catch (e) { console.error('add place error:', e) }
   }
 
   const cats = ['ทั้งหมด', ...Object.keys(CATEGORY_COLOR)]

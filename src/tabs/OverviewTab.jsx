@@ -67,7 +67,7 @@ export default function OverviewTab({ trip, uid, onEdit }) {
     if (ok) { setKmSaved(true); getCarOdometer(uid).then(setOdometer) }
   }
 
-  const weatherData  = weather || WEATHER_MOCK.slice(0, Math.max(days, 1) || 3)
+  const weatherData  = weather || WEATHER_MOCK.slice(0, Math.max(days || 3, 1))
   const isRealWeather = !!weather
 
   const shareToLine = () => {

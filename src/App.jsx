@@ -80,14 +80,16 @@ function ThaiDateInput({ value, onChange }) {
   const [y, m, d] = value ? value.split('-') : ['', '', '']
   const update = (ny, nm, nd) => { if (ny && nm && nd) onChange(`${ny}-${nm}-${nd}`) }
   const now = new Date().getFullYear()
-  const days   = Array.from({ length: 31 }, (_, i) => ({ value: String(i+1).padStart(2,'0'), label: String(i+1) }))
+  const daysInMonth = (y && m) ? new Date(Number(y), Number(m), 0).getDate() : 31
+  const days   = Array.from({ length: daysInMonth }, (_, i) => ({ value: String(i+1).padStart(2,'0'), label: String(i+1) }))
   const months = MONTHS_TH.map((name, i) => ({ value: String(i+1).padStart(2,'0'), label: name }))
   const years  = Array.from({ length: 5 }, (_, i) => ({ value: String(now+i), label: String(now+i+543) }))
+  const safeD  = days.find(o => o.value === d) ? d : ''
   return (
     <div style={{ display: 'flex', gap: 6 }}>
-      <DarkSelect value={d||''} onChange={v => update(y,m,v)} options={days}   placeholder="วัน"      style={{ flex: 1 }} />
-      <DarkSelect value={m||''} onChange={v => update(y,v,d)} options={months} placeholder="เดือน"    style={{ flex: 2 }} />
-      <DarkSelect value={y||''} onChange={v => update(v,m,d)} options={years}  placeholder="ปี (พ.ศ.)" style={{ flex: 2 }} />
+      <DarkSelect value={safeD}  onChange={v => update(y,m,v)} options={days}   placeholder="วัน"       style={{ flex: 1 }} />
+      <DarkSelect value={m||''}  onChange={v => update(y,v,d)} options={months} placeholder="เดือน"     style={{ flex: 2 }} />
+      <DarkSelect value={y||''}  onChange={v => update(v,m,d)} options={years}  placeholder="ปี (พ.ศ.)" style={{ flex: 2 }} />
     </div>
   )
 }
@@ -111,6 +113,7 @@ function CreateModal({ onClose, onSave, color: defaultColor, uid, editData }) {
     budgetTotal: '', status: 'วางแผน',
   })
   const [calcLoading, setCalcLoading] = useState(false)
+  const [calcError, setCalcError]     = useState('')
 
   useEffect(() => {
     if (uid) getCarOdometer(uid).then(setOdometer)
@@ -119,20 +122,23 @@ function CreateModal({ onClose, onSave, color: defaultColor, uid, editData }) {
   const calcDistance = async () => {
     if (!form.origin || !form.location || calcLoading) return
     setCalcLoading(true)
+    setCalcError('')
     try {
       const headers = { 'User-Agent': 'TripFamilyApp/1.0' }
       const [fromGeo, toGeo] = await Promise.all([
         fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(form.origin)}&format=json&limit=1`, { headers }).then(r => r.json()),
         fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(form.location)}&format=json&limit=1`, { headers }).then(r => r.json()),
       ])
-      if (!fromGeo[0] || !toGeo[0]) { setCalcLoading(false); return }
+      if (!fromGeo[0]) { setCalcError(`หาตำแหน่ง "${form.origin}" ไม่เจอ`); setCalcLoading(false); return }
+      if (!toGeo[0])   { setCalcError(`หาตำแหน่ง "${form.location}" ไม่เจอ`); setCalcLoading(false); return }
       const route = await fetch(
         `https://router.project-osrm.org/route/v1/driving/${fromGeo[0].lon},${fromGeo[0].lat};${toGeo[0].lon},${toGeo[0].lat}?overview=false`
       ).then(r => r.json())
-      if (!route.routes?.length) { setCalcLoading(false); return }
+      if (!route.routes?.length) { setCalcError('คำนวณเส้นทางไม่สำเร็จ ลองใหม่อีกครั้ง'); setCalcLoading(false); return }
       const km = Math.round(route.routes[0].distance / 1000)
       setForm(f => ({ ...f, distance: String(km) }))
     } catch (e) {
+      setCalcError('เกิดข้อผิดพลาด ลองใหม่อีกครั้ง')
       console.error('calcDistance error:', e)
     }
     setCalcLoading(false)
@@ -265,6 +271,11 @@ function CreateModal({ onClose, onSave, color: defaultColor, uid, editData }) {
             fontFamily: 'Sarabun, sans-serif', whiteSpace: 'nowrap',
           }}>{calcLoading ? '⏳' : '📍 คำนวณ'}</button>
         </div>
+        {calcError && (
+          <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 8, paddingLeft: 4 }}>
+            ⚠️ {calcError}
+          </div>
+        )}
         <input type="number" placeholder="ราคาน้ำมัน ฿/L" value={form.fuelPrice}
           onChange={e => setForm(f => ({ ...f, fuelPrice: e.target.value }))}
           style={{ ...IS, marginBottom: 8 }} />
@@ -374,6 +385,7 @@ export default function App() {
     await logAction(id, {
       type: 'trip_created', actor: user.displayName || 'คุณ',
       summary: `สร้างทริป "${data.name}" ${formatDate(data.dates?.start)} – ${formatDate(data.dates?.end)}`,
+      refId: id,
     })
     setSelectedId(id)
     setTab('overview')

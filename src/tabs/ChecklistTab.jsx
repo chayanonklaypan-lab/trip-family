@@ -24,6 +24,7 @@ export default function ChecklistTab({ trip, checklist, uid, userName }) {
       await logAction(trip.id, {
         type: 'checklist_done', actor: userName,
         summary: `${userName} จัดของ "${item.name}" เสร็จแล้ว ✅`,
+        refId: item.id,
       })
     }
   }

@@ -4,6 +4,7 @@ import { addExpense, logAction, notifyTripMembers } from '../firebase.js'
 
 export default function ExpensesTab({ trip, expenses, uid, userName }) {
   const [showAdd, setShowAdd] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     name: '', amount: '', category: 'อาหาร',
     paidBy: trip.members?.[0] || 'คุณ',
@@ -20,23 +21,27 @@ export default function ExpensesTab({ trip, expenses, uid, userName }) {
   }
 
   const handleAdd = async () => {
-    if (!form.name || !form.amount) return
-    const id = await addExpense(trip.id, {
-      name: form.name, amount: Number(form.amount),
-      category: form.category, paidBy: form.paidBy, splitWith: form.splitWith,
-    })
-    const summary = `${userName} บันทึก "${form.name}" ฿${Number(form.amount).toLocaleString()} (${form.category})`
-    await logAction(trip.id, {
-      type: 'expense_added', actor: userName,
-      summary, refId: id,
-    })
-    notifyTripMembers(trip, userName, `[${trip.name}]\n${summary}`)
-    setForm({
-      name: '', amount: '', category: 'อาหาร',
-      paidBy: trip.members?.[0] || 'คุณ',
-      splitWith: [...(trip.members || [])],
-    })
-    setShowAdd(false)
+    if (!form.name || !form.amount || saving) return
+    setSaving(true)
+    try {
+      const id = await addExpense(trip.id, {
+        name: form.name, amount: Number(form.amount),
+        category: form.category, paidBy: form.paidBy, splitWith: form.splitWith,
+      })
+      const summary = `${userName} บันทึก "${form.name}" ฿${Number(form.amount).toLocaleString()} (${form.category})`
+      await logAction(trip.id, { type: 'expense_added', actor: userName, summary, refId: id })
+      notifyTripMembers(trip, userName, `[${trip.name}]\n${summary}`)
+      setForm({
+        name: '', amount: '', category: 'อาหาร',
+        paidBy: trip.members?.[0] || 'คุณ',
+        splitWith: [...(trip.members || [])],
+      })
+      setShowAdd(false)
+    } catch (e) {
+      console.error('handleAdd expense error:', e)
+    } finally {
+      setSaving(false)
+    }
   }
 
   // คำนวณยอดรวม
@@ -218,7 +223,7 @@ export default function ExpensesTab({ trip, expenses, uid, userName }) {
             ))}
           </div>
 
-          <button onClick={handleAdd} style={btnPrimary(trip.color)}>บันทึก</button>
+          <button onClick={handleAdd} disabled={saving} style={btnPrimary(trip.color)}>{saving ? 'กำลังบันทึก...' : 'บันทึก'}</button>
           <button onClick={() => setShowAdd(false)} style={btnSecondary}>ยกเลิก</button>
         </div>
       ) : (
