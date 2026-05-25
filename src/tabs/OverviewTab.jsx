@@ -19,7 +19,7 @@ const Pill = ({ children, color, bg }) => (
   }}>{children}</span>
 )
 
-export default function OverviewTab({ trip, uid }) {
+export default function OverviewTab({ trip, uid, onEdit }) {
   const [weather, setWeather]           = useState(null)
   const [weatherLoading, setLoading]    = useState(false)
   const [odometer, setOdometer]         = useState(null)
@@ -104,8 +104,18 @@ export default function OverviewTab({ trip, uid }) {
 
       {/* สรุปหลัก */}
       <div style={cardStyle}>
-        <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 4 }}>
-          {trip.img} {trip.name}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div style={{ fontSize: 24, fontWeight: 900 }}>
+            {trip.img} {trip.name}
+          </div>
+          {onEdit && (
+            <button onClick={onEdit} style={{
+              padding: '6px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)',
+              background: 'rgba(255,255,255,0.06)', color: '#94a3b8',
+              fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              fontFamily: 'Sarabun, sans-serif', flexShrink: 0, marginLeft: 8,
+            }}>✏️ แก้ไข</button>
+          )}
         </div>
         {trip.location && (
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>📍 {trip.location}</div>

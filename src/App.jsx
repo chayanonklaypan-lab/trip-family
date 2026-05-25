@@ -36,7 +36,8 @@ function ThaiDateInput({ value, onChange, style = {} }) {
     padding: '10px 8px', background: 'rgba(255,255,255,0.06)',
     border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10,
     color: '#f1f5f9', fontSize: 14, fontFamily: 'Sarabun, sans-serif',
-    outline: 'none', appearance: 'none', cursor: 'pointer', ...style,
+    outline: 'none', appearance: 'none', cursor: 'pointer',
+    colorScheme: 'dark', ...style,
   }
   const update = (ny, nm, nd) => {
     if (ny && nm && nd) onChange(`${ny}-${nm}-${nd}`)
@@ -506,7 +507,7 @@ export default function App() {
           </div>
 
           <div style={{ padding: '14px 16px 40px' }}>
-            {tab === 'overview'  && <OverviewTab  trip={{ ...trip, places, expenses }} uid={user.uid} />}
+            {tab === 'overview'  && <OverviewTab  trip={{ ...trip, places, expenses }} uid={user.uid} onEdit={() => setShowEdit(true)} />}
             {tab === 'hotels'    && <HotelsTab    trip={trip} hotels={hotels} uid={user.uid} userName={userName} />}
             {tab === 'places'    && <PlacesTab    trip={trip} places={places} uid={user.uid} userName={userName} />}
             {tab === 'expenses'  && <ExpensesTab  trip={trip} expenses={expenses} uid={user.uid} userName={userName} />}
