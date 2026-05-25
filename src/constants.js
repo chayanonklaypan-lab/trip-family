@@ -5,7 +5,7 @@ export const CAR_OPTIONS = [
   { id: 'click',  name: 'Honda Click',  efficiency: 40 },
 ]
 
-export const MEMBER_OPTIONS = ['คุณ', 'แฟน', 'พ่อ', 'แม่', 'น้อง']
+export const MEMBER_OPTIONS = ['อาร์ม', 'จิ', 'มะจอย', 'ปลายปิ่น']
 
 export const STATUS_OPTIONS = ['วางแผน', 'ยืนยัน', 'กำลังเดินทาง', 'เสร็จแล้ว']
 

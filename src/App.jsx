@@ -26,6 +26,45 @@ const TABS = [
   { id: 'timeline',  label: '⏱️ Timeline' },
 ]
 
+// ── Thai Date Picker ─────────────────────────────────────────
+const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
+
+function ThaiDateInput({ value, onChange, style = {} }) {
+  const [y, m, d] = value ? value.split('-') : ['', '', '']
+  const SS = {
+    padding: '10px 8px', background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10,
+    color: '#f1f5f9', fontSize: 14, fontFamily: 'Sarabun, sans-serif',
+    outline: 'none', appearance: 'none', cursor: 'pointer', ...style,
+  }
+  const update = (ny, nm, nd) => {
+    if (ny && nm && nd) onChange(`${ny}-${nm}-${nd}`)
+  }
+  const now = new Date().getFullYear()
+  return (
+    <div style={{ display: 'flex', gap: 6 }}>
+      <select value={d || ''} onChange={e => update(y, m, e.target.value)} style={{ ...SS, flex: 1 }}>
+        <option value="">วัน</option>
+        {Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0')).map(v => (
+          <option key={v} value={v}>{Number(v)}</option>
+        ))}
+      </select>
+      <select value={m || ''} onChange={e => update(y, e.target.value, d)} style={{ ...SS, flex: 2 }}>
+        <option value="">เดือน</option>
+        {MONTHS_TH.map((name, i) => (
+          <option key={i} value={String(i + 1).padStart(2, '0')}>{name}</option>
+        ))}
+      </select>
+      <select value={y || ''} onChange={e => update(e.target.value, m, d)} style={{ ...SS, flex: 2 }}>
+        <option value="">ปี (พ.ศ.)</option>
+        {Array.from({ length: 5 }, (_, i) => now + i).map(yr => (
+          <option key={yr} value={String(yr)}>{yr + 543}</option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 // ── Create Trip Modal ────────────────────────────────────────
 function CreateModal({ onClose, onSave, color: defaultColor }) {
   const [form, setForm] = useState({
@@ -101,14 +140,10 @@ function CreateModal({ onClose, onSave, color: defaultColor }) {
         <input placeholder="🌍 เมืองปลายทาง เช่น Chiang Mai, Thailand" value={form.location}
           onChange={e => setForm(f => ({ ...f, location: e.target.value }))} style={IS} />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-          <input type="date" value={form.start}
-            onChange={e => setForm(f => ({ ...f, start: e.target.value }))}
-            style={{ ...IS, marginBottom: 0 }} />
-          <input type="date" value={form.end}
-            onChange={e => setForm(f => ({ ...f, end: e.target.value }))}
-            style={{ ...IS, marginBottom: 0 }} />
-        </div>
+        <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>วันเริ่มต้น</div>
+        <ThaiDateInput value={form.start} onChange={v => setForm(f => ({ ...f, start: v }))} style={{ marginBottom: 10 }} />
+        <div style={{ fontSize: 12, color: C.muted, margin: '10px 0 6px' }}>วันสิ้นสุด</div>
+        <ThaiDateInput value={form.end} onChange={v => setForm(f => ({ ...f, end: v }))} style={{ marginBottom: 10 }} />
 
         <div style={{ fontSize: 12, color: C.muted, margin: '12px 0 8px' }}>สมาชิก</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
