@@ -200,6 +200,10 @@ export async function checkInPlace(tripId, placeId, done) {
   await updateDoc(doc(db, 'trips', tripId, 'places', placeId), { done })
 }
 
+export async function confirmPlace(tripId, placeId, confirmed) {
+  await updateDoc(doc(db, 'trips', tripId, 'places', placeId), { confirmed })
+}
+
 export function listenPlaces(tripId, callback) {
   return onSnapshot(
     collection(db, 'trips', tripId, 'places'),

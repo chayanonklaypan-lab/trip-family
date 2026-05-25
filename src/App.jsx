@@ -322,14 +322,7 @@ export default function App() {
 
   const handleEditTrip = async (data) => {
     if (!selectedId) return
-    await updateTrip(selectedId, {
-      name: data.name, img: data.img, color: data.color,
-      dates: { start: data.start, end: data.end },
-      location: data.location, members: data.members,
-      car: CAR_OPTIONS.find(c => c.id === data.carId),
-      distance: Number(data.distance), fuelPrice: Number(data.fuelPrice),
-      budgetTotal: Number(data.budgetTotal) || 0,
-    })
+    await updateTrip(selectedId, data)
     setShowEdit(false)
   }
 

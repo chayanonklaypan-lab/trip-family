@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CATEGORY_COLOR, voteScore, cardStyle, inputStyle, btnPrimary, btnSecondary, C } from '../constants.js'
-import { addPlace, votePlace, checkInPlace, logAction, notifyTripMembers } from '../firebase.js'
+import { addPlace, votePlace, checkInPlace, confirmPlace, logAction, notifyTripMembers } from '../firebase.js'
 
 const Pill = ({ children, color, bg, border, style = {} }) => (
   <span style={{
@@ -27,6 +27,10 @@ export default function PlacesTab({ trip, places, uid, userName }) {
       summary: `${userName} โหวต ${newEmoji || 'ยกเลิก'} "${place.name}"`,
       refId: place.id,
     })
+  }
+
+  const handleConfirm = async (place) => {
+    await confirmPlace(trip.id, place.id, !place.confirmed)
   }
 
   const handleCheckin = async (place) => {
@@ -153,6 +157,17 @@ export default function PlacesTab({ trip, places, uid, userName }) {
                 ))}
               </div>
             )}
+
+            {/* ยืนยัน */}
+            <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => handleConfirm(p)} style={{
+                padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                background: p.confirmed ? '#6366f1' : 'rgba(255,255,255,0.06)',
+                color: p.confirmed ? '#fff' : C.muted2,
+                border: `1.5px solid ${p.confirmed ? '#6366f1' : 'rgba(255,255,255,0.15)'}`,
+                cursor: 'pointer', fontFamily: 'Sarabun, sans-serif',
+              }}>{p.confirmed ? '📌 ไปที่นี่แน่นอน' : '📌 ไปที่นี่?'}</button>
+            </div>
           </div>
         )
       })}
