@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { voteScore, cardStyle, inputStyle, btnPrimary, btnSecondary, C } from '../constants.js'
-import { addHotel, voteHotel, logAction } from '../firebase.js'
+import { addHotel, voteHotel, logAction, notifyTripMembers } from '../firebase.js'
 
 export default function HotelsTab({ trip, hotels, uid, userName }) {
   const [showAdd, setShowAdd] = useState(false)
@@ -27,12 +27,14 @@ export default function HotelsTab({ trip, hotels, uid, userName }) {
       price: Number(form.price) || 0,
       link: form.link,
     })
+    const summary = `${userName} เพิ่มที่พัก "${form.name}" ฿${form.price}/คืน`
     await logAction(trip.id, {
       type: 'hotel_added',
       actor: userName,
-      summary: `${userName} เพิ่มที่พัก "${form.name}" ฿${form.price}/คืน`,
+      summary,
       refId: id,
     })
+    notifyTripMembers(trip, userName, `[${trip.name}]\n${summary}`)
     setForm({ name: '', price: '', link: '' })
     setShowAdd(false)
     setLoading(false)

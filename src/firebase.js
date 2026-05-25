@@ -19,19 +19,15 @@ const firebaseConfig = {
   appId:             "1:59908518783:web:30a0e1118ea3ee766c604a",
 }
 
-const app         = initializeApp(firebaseConfig)
-export const auth = getAuth(app)
-export const db   = getFirestore(app)
+const app            = initializeApp(firebaseConfig)
+export const auth    = getAuth(app)
+export const db      = getFirestore(app)
 
 // ── Auth ──────────────────────────────────────────────────────
 const provider = new GoogleAuthProvider()
 export const loginWithGoogle = () => signInWithPopup(auth, provider)
 export const logout          = () => signOut(auth)
 export { onAuthStateChanged }
-
-// ── LINE Messaging API ────────────────────────────────────────
-// ใส่ Channel Access Token ที่ได้จาก LINE Developers Console
-const LINE_TOKEN = 'YOUR_LINE_CHANNEL_ACCESS_TOKEN'
 
 // ── OpenWeatherMap ────────────────────────────────────────────
 // ขอ free API key ได้ที่ openweathermap.org
@@ -83,23 +79,30 @@ export async function fetchWeather(city, startDate, days) {
   }
 }
 
-export async function notifyLine(userId, message) {
-  if (!LINE_TOKEN || LINE_TOKEN === 'YOUR_LINE_CHANNEL_ACCESS_TOKEN') {
-    console.log('[LINE notify mock]', userId, message)
-    return
-  }
+export async function saveLineToken(memberName, token) {
+  await setDoc(doc(db, 'settings', 'lineTokens'), { [memberName]: token }, { merge: true })
+}
+
+export async function getLineTokens() {
+  const snap = await getDoc(doc(db, 'settings', 'lineTokens'))
+  return snap.exists() ? snap.data() : {}
+}
+
+export async function notifyTripMembers(trip, actorName, message) {
   try {
-    await fetch('https://api.line.me/v2/bot/message/push', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${LINE_TOKEN}`,
-      },
-      body: JSON.stringify({
-        to: userId,
-        messages: [{ type: 'text', text: message }],
-      }),
-    })
+    const tokens = await getLineTokens()
+    const recipients = (trip.members || []).filter(m => m !== actorName)
+    await Promise.all(
+      recipients
+        .filter(m => tokens[m])
+        .map(m =>
+          fetch('/api/line-notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: tokens[m], message }),
+          })
+        )
+    )
   } catch (e) {
     console.error('LINE notify error:', e)
   }
@@ -200,7 +203,7 @@ export function listenExpenses(tripId, callback) {
 // ── TIMELINE ──────────────────────────────────────────────────
 export async function logAction(tripId, { type, actor, summary, refId = '' }) {
   await addDoc(collection(db, 'trips', tripId, 'timeline'), {
-    type, actor, summary, refId, timestamp: ts(),
+    type, actor, summary, refId, photoUrl, timestamp: ts(),
   })
 }
 
@@ -233,6 +236,31 @@ export function listenChecklist(tripId, callback) {
   )
 }
 
+// ── MEMORIES ──────────────────────────────────────────────────
+export async function archiveTrip(tripId, { trip, expenses, places }) {
+  const totalExpense = expenses.reduce((s, e) => s + (e.amount || 0), 0)
+  const placesVisited = places.filter(p => p.done).map(p => ({ name: p.name, category: p.category }))
+  const start = trip.dates?.start ? new Date(trip.dates.start) : null
+  const end   = trip.dates?.end   ? new Date(trip.dates.end)   : null
+  const days  = start && end ? Math.round((end - start) / 86400000) + 1 : 0
+  await setDoc(doc(db, 'memories', tripId), {
+    tripId, name: trip.name, img: trip.img, color: trip.color,
+    dates: trip.dates, members: trip.members || [],
+    days, totalExpense, placesVisited,
+    placesTotal: places.length,
+    budgetTotal: trip.budgetTotal || 0,
+    car: trip.car || null, location: trip.location || '',
+    archivedAt: ts(),
+  })
+}
+
+export function listenMemories(callback) {
+  return onSnapshot(
+    query(collection(db, 'memories'), orderBy('archivedAt', 'desc')),
+    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  )
+}
+
 // ── TEMPLATES ─────────────────────────────────────────────────
 export async function saveTemplate(name, items) {
   return addDoc(collection(db, 'templates'), { name, items, createdAt: ts() })
@@ -247,6 +275,36 @@ export async function getTemplates() {
 export async function getCars() {
   const snap = await getDocs(collection(db, 'cars'))
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+}
+
+export async function getCarOdometer(uid) {
+  try {
+    const snap = await getDoc(doc(db, 'car_app', uid))
+    if (!snap.exists()) return null
+    const cars = snap.data()?.data?.cars || []
+    return cars.map(c => ({ brand: c.brand, km: c.km }))
+  } catch {
+    return null
+  }
+}
+
+export async function updateCarOdometer(uid, newKm) {
+  try {
+    const ref = doc(db, 'car_app', uid)
+    const snap = await getDoc(ref)
+    if (!snap.exists()) return false
+    const cars = [...(snap.data()?.data?.cars || [])]
+    if (cars.length === 0) return false
+    // อัปเดต km ของรถคันแรก (MG5)
+    const idx = cars.findIndex(c => c.brand?.includes('MG') || c.isMG5)
+    const i = idx >= 0 ? idx : 0
+    cars[i] = { ...cars[i], km: Number(newKm) }
+    await updateDoc(ref, { 'data.cars': cars })
+    return true
+  } catch (e) {
+    console.error('updateCarOdometer error:', e)
+    return false
+  }
 }
 
 export async function getFuelEfficiency(carId) {

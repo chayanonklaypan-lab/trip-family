@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CATEGORY_COLOR, voteScore, cardStyle, inputStyle, btnPrimary, btnSecondary, C } from '../constants.js'
-import { addPlace, votePlace, checkInPlace, logAction } from '../firebase.js'
+import { addPlace, votePlace, checkInPlace, logAction, notifyTripMembers } from '../firebase.js'
 
 const Pill = ({ children, color, bg, border, style = {} }) => (
   <span style={{
@@ -33,22 +33,24 @@ export default function PlacesTab({ trip, places, uid, userName }) {
     const newDone = !place.done
     await checkInPlace(trip.id, place.id, newDone)
     if (newDone) {
+      const summary = `${userName} เช็คอินที่ "${place.name}" ✅`
       await logAction(trip.id, {
         type: 'place_checkin', actor: userName,
-        summary: `${userName} เช็คอินที่ "${place.name}" ✅`,
-        refId: place.id,
+        summary, refId: place.id,
       })
+      notifyTripMembers(trip, userName, `[${trip.name}]\n${summary}`)
     }
   }
 
   const handleAdd = async () => {
     if (!form.name) return
     const id = await addPlace(trip.id, { name: form.name, category: form.category, link: form.link })
+    const summary = `${userName} เพิ่มสถานที่ "${form.name}" (${form.category})`
     await logAction(trip.id, {
       type: 'place_added', actor: userName,
-      summary: `${userName} เพิ่มสถานที่ "${form.name}" (${form.category})`,
-      refId: id,
+      summary, refId: id,
     })
+    notifyTripMembers(trip, userName, `[${trip.name}]\n${summary}`)
     setForm({ name: '', category: 'เที่ยว', link: '' })
     setShowAdd(false)
   }

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   auth, loginWithGoogle, logout, onAuthStateChanged,
   listenTrips, listenHotels, listenPlaces, listenExpenses,
   listenTimeline, listenChecklist,
-  createTrip, logAction, saveUser,
+  createTrip, logAction, saveUser, getCarOdometer, listenMemories,
+  saveLineToken, getLineTokens,
 } from './firebase.js'
 import {
   CAR_OPTIONS, MEMBER_OPTIONS, STATUS_OPTIONS, STATUS_CONFIG,
@@ -66,7 +67,8 @@ function ThaiDateInput({ value, onChange, style = {} }) {
 }
 
 // ── Create Trip Modal ────────────────────────────────────────
-function CreateModal({ onClose, onSave, color: defaultColor }) {
+function CreateModal({ onClose, onSave, color: defaultColor, uid }) {
+  const [odometer, setOdometer] = useState(null)
   const [form, setForm] = useState({
     name: '', img: '✈️', color: defaultColor || '#6366f1',
     start: '', end: '', location: '',
@@ -74,6 +76,10 @@ function CreateModal({ onClose, onSave, color: defaultColor }) {
     distance: '', fuelPrice: 42,
     budgetTotal: '', status: 'วางแผน',
   })
+
+  useEffect(() => {
+    if (uid) getCarOdometer(uid).then(setOdometer)
+  }, [uid])
 
   const car = CAR_OPTIONS.find(c => c.id === form.carId)
   const fuel = fuelCost(Number(form.distance), car?.efficiency, form.fuelPrice)
@@ -172,6 +178,20 @@ function CreateModal({ onClose, onSave, color: defaultColor }) {
           ))}
         </div>
 
+        {odometer && odometer.length > 0 && (
+          <div style={{
+            background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)',
+            borderRadius: 10, padding: '8px 12px', marginBottom: 10,
+            display: 'flex', flexWrap: 'wrap', gap: 8,
+          }}>
+            {odometer.map((c, i) => (
+              <div key={i} style={{ fontSize: 12, color: '#a5b4fc' }}>
+                🚗 {c.brand} — <span style={{ fontWeight: 700 }}>{(c.km || 0).toLocaleString()} km</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
           <input type="number" placeholder="ระยะทาง (km)" value={form.distance}
             onChange={e => setForm(f => ({ ...f, distance: e.target.value }))}
@@ -225,6 +245,11 @@ export default function App() {
   const [expenses,  setExpenses]  = useState([])
   const [timeline,  setTimeline]  = useState([])
   const [checklist, setChecklist] = useState([])
+  const [memories,  setMemories]  = useState([])
+  const [showMemories, setShowMemories] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [lineTokens, setLineTokens] = useState({})
+  const [tokenInputs, setTokenInputs] = useState({})
 
   const trip = trips.find(t => t.id === selectedId)
 
@@ -250,6 +275,18 @@ export default function App() {
       setTrips(data)
       if (!selectedId && data.length > 0) setSelectedId(data[0].id)
     })
+  }, [user])
+
+  // ── Memories listener ──────────────────────────────────────
+  useEffect(() => {
+    if (!user) return
+    return listenMemories(setMemories)
+  }, [user])
+
+  // ── LINE Notify tokens ─────────────────────────────────────
+  useEffect(() => {
+    if (!user) return
+    getLineTokens().then(t => { setLineTokens(t); setTokenInputs(t) })
   }, [user])
 
   // ── Subcollections listener ────────────────────────────────
@@ -337,6 +374,20 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {memories.length > 0 && (
+            <div onClick={() => setShowMemories(true)} style={{
+              background: 'rgba(99,102,241,0.15)', color: '#a5b4fc',
+              borderRadius: 20, padding: '6px 12px',
+              fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              border: '1px solid rgba(99,102,241,0.3)',
+            }}>🎞️ {memories.length}</div>
+          )}
+          <div onClick={() => setShowSettings(true)} style={{
+            background: 'rgba(255,255,255,0.06)', color: C.muted2,
+            borderRadius: 20, padding: '6px 12px',
+            fontSize: 13, cursor: 'pointer',
+            border: '1px solid rgba(255,255,255,0.1)',
+          }}>⚙️</div>
           <div onClick={() => setShowCreate(true)} style={{
             background: `${tripColor}`, color: '#000',
             borderRadius: 20, padding: '6px 14px',
@@ -411,7 +462,7 @@ export default function App() {
           </div>
 
           <div style={{ padding: '14px 16px 40px' }}>
-            {tab === 'overview'  && <OverviewTab  trip={{ ...trip, places, expenses }} />}
+            {tab === 'overview'  && <OverviewTab  trip={{ ...trip, places, expenses }} uid={user.uid} />}
             {tab === 'hotels'    && <HotelsTab    trip={trip} hotels={hotels} uid={user.uid} userName={userName} />}
             {tab === 'places'    && <PlacesTab    trip={trip} places={places} uid={user.uid} userName={userName} />}
             {tab === 'expenses'  && <ExpensesTab  trip={trip} expenses={expenses} uid={user.uid} userName={userName} />}
@@ -423,11 +474,148 @@ export default function App() {
         </>
       )}
 
+      {showMemories && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
+          backdropFilter: 'blur(4px)', zIndex: 300,
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        }} onClick={e => e.target === e.currentTarget && setShowMemories(false)}>
+          <div style={{
+            background: '#1e293b', borderRadius: '24px 24px 0 0',
+            padding: '24px 20px 40px', width: '100%', maxWidth: 480,
+            maxHeight: '85vh', overflowY: 'auto',
+            border: '1px solid rgba(255,255,255,0.1)', borderBottom: 'none',
+          }}>
+            <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 20 }}>🎞️ ความทรงจำ</div>
+            {memories.map(m => (
+              <div key={m.id} style={{
+                background: `linear-gradient(135deg,${m.color}15,${m.color}25)`,
+                border: `1.5px solid ${m.color}44`,
+                borderRadius: 16, padding: 16, marginBottom: 12,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <span style={{ fontSize: 28 }}>{m.img}</span>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 16 }}>{m.name}</div>
+                    <div style={{ fontSize: 12, color: C.muted }}>
+                      {formatDate(m.dates?.start)} – {formatDate(m.dates?.end)} · {m.days} วัน
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                  {[
+                    { icon: '💰', label: 'ค่าใช้จ่าย', value: `฿${(m.totalExpense||0).toLocaleString()}` },
+                    { icon: '📍', label: 'สถานที่', value: `${(m.placesVisited||[]).length}/${m.placesTotal||0}` },
+                    { icon: '👥', label: 'สมาชิก', value: `${(m.members||[]).length} คน` },
+                  ].map(item => (
+                    <div key={item.label} style={{
+                      background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: '8px 10px',
+                      textAlign: 'center',
+                    }}>
+                      <div style={{ fontSize: 16 }}>{item.icon}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: m.color, marginTop: 2 }}>{item.value}</div>
+                      <div style={{ fontSize: 10, color: C.muted }}>{item.label}</div>
+                    </div>
+                  ))}
+                </div>
+                {(m.placesVisited || []).length > 0 && (
+                  <div style={{ marginTop: 10, fontSize: 12, color: C.muted2 }}>
+                    📍 {m.placesVisited.map(p => p.name).join(' · ')}
+                  </div>
+                )}
+                {m.location && (
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>🌍 {m.location}</div>
+                )}
+              </div>
+            ))}
+            <button onClick={() => setShowMemories(false)} style={{
+              width: '100%', padding: 12, background: 'rgba(255,255,255,0.05)',
+              color: C.muted2, border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 12, cursor: 'pointer', fontFamily: 'Sarabun, sans-serif',
+            }}>ปิด</button>
+          </div>
+        </div>
+      )}
+
+      {showSettings && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
+          backdropFilter: 'blur(4px)', zIndex: 300,
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        }} onClick={e => e.target === e.currentTarget && setShowSettings(false)}>
+          <div style={{
+            background: '#1e293b', borderRadius: '24px 24px 0 0',
+            padding: '24px 20px 40px', width: '100%', maxWidth: 480,
+            maxHeight: '85vh', overflowY: 'auto',
+            border: '1px solid rgba(255,255,255,0.1)', borderBottom: 'none',
+          }}>
+            <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 6 }}>⚙️ ตั้งค่า LINE Notify</div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>
+              รับ token ได้ที่{' '}
+              <span style={{ color: '#60a5fa' }}>notify.line.me</span>
+              {' '}→ Generate token
+            </div>
+            {MEMBER_OPTIONS.map(member => (
+              <div key={member} style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 13, color: C.muted2, marginBottom: 6, fontWeight: 600 }}>
+                  {member}
+                  {lineTokens[member] && (
+                    <span style={{ marginLeft: 8, fontSize: 11, color: '#10b981' }}>✓ เชื่อมแล้ว</span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="text"
+                    placeholder="วาง LINE Notify token ที่นี่"
+                    value={tokenInputs[member] || ''}
+                    onChange={e => setTokenInputs(t => ({ ...t, [member]: e.target.value }))}
+                    style={{
+                      flex: 1, padding: '10px 12px',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: 10, color: '#f1f5f9', fontSize: 13,
+                      fontFamily: 'Sarabun, sans-serif', outline: 'none',
+                    }}
+                  />
+                  <button
+                    onClick={async () => {
+                      const token = (tokenInputs[member] || '').trim()
+                      if (!token) return
+                      await saveLineToken(member, token)
+                      setLineTokens(t => ({ ...t, [member]: token }))
+                    }}
+                    style={{
+                      padding: '10px 14px', borderRadius: 10, border: 'none',
+                      background: tripColor, color: '#000',
+                      fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                      fontFamily: 'Sarabun, sans-serif', flexShrink: 0,
+                    }}
+                  >บันทึก</button>
+                </div>
+              </div>
+            ))}
+            <div style={{
+              background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.2)',
+              borderRadius: 12, padding: '10px 14px', fontSize: 12, color: '#93c5fd', marginTop: 8,
+            }}>
+              💡 แต่ละคนต้องเข้า notify.line.me แล้ว Generate token ให้ตัวเอง แล้วส่ง token มาให้ใส่ที่นี่
+            </div>
+            <button onClick={() => setShowSettings(false)} style={{
+              width: '100%', marginTop: 16, padding: 12,
+              background: 'rgba(255,255,255,0.05)', color: C.muted2,
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 12, cursor: 'pointer', fontFamily: 'Sarabun, sans-serif',
+            }}>ปิด</button>
+          </div>
+        </div>
+      )}
+
       {showCreate && (
         <CreateModal
           onClose={() => setShowCreate(false)}
           onSave={handleCreateTrip}
           color={tripColor}
+          uid={user.uid}
         />
       )}
     </div>

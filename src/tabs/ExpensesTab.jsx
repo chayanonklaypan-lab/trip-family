@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { EXPENSE_CATEGORY, totalAmt, fuelCost, cardStyle, inputStyle, btnPrimary, btnSecondary, C } from '../constants.js'
-import { addExpense, logAction } from '../firebase.js'
+import { addExpense, logAction, notifyTripMembers } from '../firebase.js'
 
 export default function ExpensesTab({ trip, expenses, uid, userName }) {
   const [showAdd, setShowAdd] = useState(false)
@@ -25,11 +25,12 @@ export default function ExpensesTab({ trip, expenses, uid, userName }) {
       name: form.name, amount: Number(form.amount),
       category: form.category, paidBy: form.paidBy, splitWith: form.splitWith,
     })
+    const summary = `${userName} บันทึก "${form.name}" ฿${Number(form.amount).toLocaleString()} (${form.category})`
     await logAction(trip.id, {
       type: 'expense_added', actor: userName,
-      summary: `${userName} บันทึก "${form.name}" ฿${Number(form.amount).toLocaleString()} (${form.category})`,
-      refId: id,
+      summary, refId: id,
     })
+    notifyTripMembers(trip, userName, `[${trip.name}]\n${summary}`)
     setForm({
       name: '', amount: '', category: 'อาหาร',
       paidBy: trip.members?.[0] || 'คุณ',
