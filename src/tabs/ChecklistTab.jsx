@@ -139,7 +139,7 @@ export default function ChecklistTab({ trip, checklist, uid, userName }) {
           border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: 12, fontWeight: 700, cursor: 'pointer',
           fontFamily: 'Sarabun, sans-serif',
-        }}>📋 โหลด Template</button>
+        }}>📋 Template</button>
       </div>
 
       {showAdd && (
@@ -176,6 +176,23 @@ export default function ChecklistTab({ trip, checklist, uid, userName }) {
       )}
 
       {/* Template list */}
+      {showTemplate && templates.length === 0 && (
+        <div style={{
+          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 14, padding: 16, textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 13, color: C.muted2, marginBottom: 4 }}>ยังไม่มี Template</div>
+          <div style={{ fontSize: 12, color: C.muted }}>
+            ใส่รายการจัดของที่ชอบ → กรอกชื่อ → กด 💾 บันทึก<br/>ครั้งหน้าโหลดมาใช้ได้เลย
+          </div>
+          <button onClick={() => setShowTemplate(false)} style={{
+            marginTop: 12, padding: '8px 20px', background: 'rgba(255,255,255,0.06)',
+            color: C.muted2, border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 10, cursor: 'pointer', fontFamily: 'Sarabun, sans-serif',
+          }}>ปิด</button>
+        </div>
+      )}
+
       {showTemplate && templates.length > 0 && (
         <div style={cardStyle}>
           <div style={{ fontWeight: 700, marginBottom: 10 }}>📋 เลือก Template</div>

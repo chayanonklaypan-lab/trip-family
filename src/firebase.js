@@ -171,6 +171,10 @@ export async function voteHotel(tripId, hotelId, uid, emoji) {
   })
 }
 
+export async function confirmHotel(tripId, hotelId, confirmed) {
+  await updateDoc(doc(db, 'trips', tripId, 'hotels', hotelId), { confirmed })
+}
+
 export function listenHotels(tripId, callback) {
   return onSnapshot(
     collection(db, 'trips', tripId, 'hotels'),

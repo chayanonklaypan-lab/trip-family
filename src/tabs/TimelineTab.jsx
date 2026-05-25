@@ -1,4 +1,4 @@
-import { TIMELINE_LABEL, formatTime, cardStyle, C } from '../constants.js'
+import { TIMELINE_LABEL, formatTime, C } from '../constants.js'
 
 export default function TimelineTab({ timeline }) {
   if (!timeline || timeline.length === 0) {
@@ -13,15 +13,13 @@ export default function TimelineTab({ timeline }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0, position: 'relative' }}>
-      {/* เส้นแนวตั้ง */}
       <div style={{
         position: 'absolute', left: 19, top: 0, bottom: 0,
         width: 2, background: 'rgba(255,255,255,0.06)',
       }} />
 
-      {timeline.map((item, i) => (
+      {timeline.map((item) => (
         <div key={item.id} style={{ display: 'flex', gap: 12, marginBottom: 16, position: 'relative' }}>
-          {/* จุด */}
           <div style={{
             width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
             background: '#1e293b', border: '2px solid rgba(255,255,255,0.12)',

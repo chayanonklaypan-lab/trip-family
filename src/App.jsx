@@ -3,7 +3,7 @@ import {
   auth, loginWithGoogle, logout, onAuthStateChanged,
   listenTrips, listenHotels, listenPlaces, listenExpenses,
   listenTimeline, listenChecklist,
-  createTrip, logAction, saveUser, getCarOdometer, listenMemories,
+  createTrip, updateTrip, logAction, saveUser, getCarOdometer, listenMemories,
   subscribePush,
 } from './firebase.js'
 import {
@@ -66,13 +66,20 @@ function ThaiDateInput({ value, onChange, style = {} }) {
   )
 }
 
-// ── Create Trip Modal ────────────────────────────────────────
-function CreateModal({ onClose, onSave, color: defaultColor, uid }) {
+// ── Create / Edit Trip Modal ──────────────────────────────────
+function CreateModal({ onClose, onSave, color: defaultColor, uid, editData }) {
   const [odometer, setOdometer] = useState(null)
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(editData ? {
+    name: editData.name || '', img: editData.img || '✈️', color: editData.color || defaultColor || '#6366f1',
+    start: editData.dates?.start || '', end: editData.dates?.end || '',
+    location: editData.location || '', members: editData.members || [],
+    carId: editData.car?.id || 'mg5', distance: editData.distance || '',
+    fuelPrice: editData.fuelPrice || 42, budgetTotal: editData.budgetTotal || '',
+    status: editData.status || 'วางแผน',
+  } : {
     name: '', img: '✈️', color: defaultColor || '#6366f1',
     start: '', end: '', location: '',
-    members: ['คุณ'], carId: 'mg5',
+    members: [], carId: 'mg5',
     distance: '', fuelPrice: 42,
     budgetTotal: '', status: 'วางแผน',
   })
@@ -117,7 +124,9 @@ function CreateModal({ onClose, onSave, color: defaultColor, uid }) {
         width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto',
         border: '1px solid rgba(255,255,255,0.1)', borderBottom: 'none',
       }}>
-        <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 20 }}>✈️ สร้างทริปใหม่</div>
+        <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 20 }}>
+          {editData ? '✏️ แก้ไขทริป' : '✈️ สร้างทริปใหม่'}
+        </div>
 
         {/* Emoji */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
@@ -219,7 +228,7 @@ function CreateModal({ onClose, onSave, color: defaultColor, uid }) {
           width: '100%', padding: 14, background: form.color, color: '#000',
           border: 'none', borderRadius: 12, fontWeight: 800, fontSize: 16,
           cursor: 'pointer', fontFamily: 'Sarabun, sans-serif', marginBottom: 8,
-        }}>สร้างทริป {form.img}</button>
+        }}>{editData ? `บันทึก ${form.img}` : `สร้างทริป ${form.img}`}</button>
         <button onClick={onClose} style={{
           width: '100%', padding: 12, background: 'rgba(255,255,255,0.05)', color: C.muted2,
           border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12,
@@ -238,6 +247,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null)
   const [tab, setTab]             = useState('overview')
   const [showCreate, setShowCreate] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
 
   // subcollections ของทริปที่เลือก
   const [hotels,    setHotels]    = useState([])
@@ -308,6 +318,19 @@ export default function App() {
     })
     setSelectedId(id)
     setTab('overview')
+  }
+
+  const handleEditTrip = async (data) => {
+    if (!selectedId) return
+    await updateTrip(selectedId, {
+      name: data.name, img: data.img, color: data.color,
+      dates: { start: data.start, end: data.end },
+      location: data.location, members: data.members,
+      car: CAR_OPTIONS.find(c => c.id === data.carId),
+      distance: Number(data.distance), fuelPrice: Number(data.fuelPrice),
+      budgetTotal: Number(data.budgetTotal) || 0,
+    })
+    setShowEdit(false)
   }
 
   // ── Loading ────────────────────────────────────────────────
@@ -446,8 +469,14 @@ export default function App() {
                     background: sc.bg, color: sc.text, border: `1px solid ${sc.border}`,
                   }}>{t.status}</span>
                 </div>
-                <div style={{ fontSize: 11, color: '#475569', marginTop: 5 }}>
-                  👥 {(t.members || []).length} คน
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 }}>
+                  <span style={{ fontSize: 11, color: '#475569' }}>👥 {(t.members || []).length} คน</span>
+                  {isSel && (
+                    <span onClick={e => { e.stopPropagation(); setShowEdit(true) }} style={{
+                      fontSize: 11, color: t.color, cursor: 'pointer', padding: '2px 6px',
+                      background: `${t.color}22`, borderRadius: 6,
+                    }}>✏️ แก้ไข</span>
+                  )}
                 </div>
               </div>
             )
@@ -638,6 +667,16 @@ export default function App() {
           onSave={handleCreateTrip}
           color={tripColor}
           uid={user.uid}
+        />
+      )}
+
+      {showEdit && trip && (
+        <CreateModal
+          onClose={() => setShowEdit(false)}
+          onSave={handleEditTrip}
+          color={tripColor}
+          uid={user.uid}
+          editData={trip}
         />
       )}
     </div>

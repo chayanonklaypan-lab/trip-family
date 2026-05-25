@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { voteScore, cardStyle, inputStyle, btnPrimary, btnSecondary, C } from '../constants.js'
-import { addHotel, voteHotel, logAction, notifyTripMembers } from '../firebase.js'
+import { addHotel, voteHotel, confirmHotel, logAction, notifyTripMembers } from '../firebase.js'
 
 export default function HotelsTab({ trip, hotels, uid, userName }) {
   const [showAdd, setShowAdd] = useState(false)
@@ -111,10 +111,19 @@ export default function HotelsTab({ trip, hotels, uid, userName }) {
               ))}
             </div>
 
-            <div style={{ marginTop: 10, fontSize: 12, color: C.muted }}>
-              คะแนนรวม: <span style={{ color: trip.color, fontWeight: 700 }}>
-                {score > 0 ? '+' : ''}{score}
+            <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 12, color: C.muted }}>
+                คะแนน: <span style={{ color: trip.color, fontWeight: 700 }}>{score > 0 ? '+' : ''}{score}</span>
               </span>
+              <button onClick={async () => {
+                await confirmHotel(trip.id, h.id, !h.confirmed)
+              }} style={{
+                padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                background: h.confirmed ? '#10b981' : 'rgba(255,255,255,0.06)',
+                color: h.confirmed ? '#fff' : C.muted2,
+                border: `1.5px solid ${h.confirmed ? '#10b981' : 'rgba(255,255,255,0.15)'}`,
+                cursor: 'pointer', fontFamily: 'Sarabun, sans-serif',
+              }}>{h.confirmed ? '✅ เลือกที่นี่แล้ว' : '📌 เลือกที่นี่'}</button>
             </div>
           </div>
         )
@@ -123,7 +132,10 @@ export default function HotelsTab({ trip, hotels, uid, userName }) {
       {/* ฟอร์มเพิ่ม */}
       {showAdd ? (
         <div style={cardStyle}>
-          <div style={{ fontWeight: 700, marginBottom: 12 }}>🏨 เพิ่มที่พักใหม่</div>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>🏨 เพิ่มที่พักใหม่</div>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>
+            💡 Maps จะค้นชื่อโรงแรมอัตโนมัติ — ใส่ลิงก์ Agoda เฉพาะถ้าอยากกดจองได้เลย
+          </div>
           {[
             { key: 'name',  placeholder: 'ชื่อโรงแรม',          type: 'text' },
             { key: 'price', placeholder: 'ราคา/คืน (บาท)',       type: 'number' },
