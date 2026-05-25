@@ -36,8 +36,8 @@ function DarkSelect({ value, onChange, options, placeholder, style = {} }) {
   useEffect(() => {
     if (!open) return
     const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    document.addEventListener('pointerdown', handler)
+    return () => document.removeEventListener('pointerdown', handler)
   }, [open])
   const selected = options.find(o => o.value === value)
   return (
@@ -58,17 +58,18 @@ function DarkSelect({ value, onChange, options, placeholder, style = {} }) {
           boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
         }}>
           {options.map(opt => (
-            <div key={opt.value} onClick={() => { onChange(opt.value); setOpen(false) }}
+            <button
+              key={opt.value}
+              type="button"
+              onPointerDown={e => { e.stopPropagation(); onChange(opt.value); setOpen(false) }}
               style={{
-                padding: '10px 14px', cursor: 'pointer', fontSize: 14,
+                display: 'block', width: '100%', textAlign: 'left',
+                padding: '10px 14px', border: 'none', cursor: 'pointer', fontSize: 14,
                 fontFamily: 'Sarabun, sans-serif',
                 color: opt.value === value ? '#a5b4fc' : '#f1f5f9',
                 background: opt.value === value ? 'rgba(99,102,241,0.18)' : 'transparent',
-                transition: 'background 0.1s',
               }}
-              onMouseEnter={e => { if (opt.value !== value) e.currentTarget.style.background = 'rgba(255,255,255,0.07)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = opt.value === value ? 'rgba(99,102,241,0.18)' : 'transparent' }}
-            >{opt.label}</div>
+            >{opt.label}</button>
           ))}
         </div>
       )}
