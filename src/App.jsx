@@ -603,7 +603,7 @@ export default function App() {
                   const result = await subscribePush(myName)
                   setPushLoading(false)
                   if (result === 'ok') setPushEnabled(true)
-                  else alert('Error: ' + result)
+                  else alert('ไม่สามารถเปิดการแจ้งเตือนได้ ลองอนุญาต notification ในการตั้งค่าเบราว์เซอร์')
                 }}
                 style={{
                   width: '100%', padding: 14, borderRadius: 12, border: 'none',
