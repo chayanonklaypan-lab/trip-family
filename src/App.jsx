@@ -119,20 +119,35 @@ function CreateModal({ onClose, onSave, color: defaultColor, uid, editData }) {
     if (uid) getCarOdometer(uid).then(setOdometer)
   }, [uid])
 
+  // รับทั้งชื่อสถานที่และ Google Maps URL (เต็ม) แล้วคืน {lat, lon}
+  const resolveCoords = async (input, headers) => {
+    // ดึง @lat,lon จาก Google Maps URL เช่น google.com/maps/place/...@13.75,100.5,15z
+    const gmMatch = input.match(/@(-?\d+\.?\d+),(-?\d+\.?\d+)/)
+    if (gmMatch) return { lat: gmMatch[1], lon: gmMatch[2] }
+    // ดึง query= จาก Maps search URL เช่น google.com/maps/search/?query=ชื่อ
+    const qMatch = input.match(/[?&]query=([^&]+)/)
+    const searchTerm = qMatch ? decodeURIComponent(qMatch[1]) : input
+    const results = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchTerm)}&format=json&limit=1`,
+      { headers }
+    ).then(r => r.json())
+    return results[0] ? { lat: results[0].lat, lon: results[0].lon } : null
+  }
+
   const calcDistance = async () => {
     if (!form.origin || !form.location || calcLoading) return
     setCalcLoading(true)
     setCalcError('')
     try {
       const headers = { 'User-Agent': 'TripFamilyApp/1.0' }
-      const [fromGeo, toGeo] = await Promise.all([
-        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(form.origin)}&format=json&limit=1`, { headers }).then(r => r.json()),
-        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(form.location)}&format=json&limit=1`, { headers }).then(r => r.json()),
+      const [from, to] = await Promise.all([
+        resolveCoords(form.origin, headers),
+        resolveCoords(form.location, headers),
       ])
-      if (!fromGeo[0]) { setCalcError(`หาตำแหน่ง "${form.origin}" ไม่เจอ`); setCalcLoading(false); return }
-      if (!toGeo[0])   { setCalcError(`หาตำแหน่ง "${form.location}" ไม่เจอ`); setCalcLoading(false); return }
+      if (!from) { setCalcError(`หาตำแหน่ง "${form.origin}" ไม่เจอ — ลองวาง Google Maps URL หรือชื่อภาษาอังกฤษ`); setCalcLoading(false); return }
+      if (!to)   { setCalcError(`หาตำแหน่ง "${form.location}" ไม่เจอ — ลองวาง Google Maps URL หรือชื่อภาษาอังกฤษ`); setCalcLoading(false); return }
       const route = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${fromGeo[0].lon},${fromGeo[0].lat};${toGeo[0].lon},${toGeo[0].lat}?overview=false`
+        `https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=false`
       ).then(r => r.json())
       if (!route.routes?.length) { setCalcError('คำนวณเส้นทางไม่สำเร็จ ลองใหม่อีกครั้ง'); setCalcLoading(false); return }
       const km = Math.round(route.routes[0].distance / 1000)
@@ -208,9 +223,9 @@ function CreateModal({ onClose, onSave, color: defaultColor, uid, editData }) {
         <input placeholder="ชื่อทริป เช่น เชียงใหม่ มิ.ย. 69" value={form.name}
           onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={IS} />
 
-        <input placeholder="📍 จุดเริ่มต้น เช่น กรุงเทพ, Bangkok" value={form.origin}
+        <input placeholder="📍 จุดเริ่มต้น — ชื่อสถานที่ หรือ วาง Google Maps URL" value={form.origin}
           onChange={e => setForm(f => ({ ...f, origin: e.target.value }))} style={IS} />
-        <input placeholder="🏁 ปลายทาง เช่น Chiang Mai, Thailand" value={form.location}
+        <input placeholder="🏁 ปลายทาง — ชื่อสถานที่ หรือ วาง Google Maps URL" value={form.location}
           onChange={e => setForm(f => ({ ...f, location: e.target.value }))} style={IS} />
 
         <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>วันเริ่มต้น</div>
