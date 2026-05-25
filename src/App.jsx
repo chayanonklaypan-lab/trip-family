@@ -248,7 +248,7 @@ export default function App() {
   const [memories,  setMemories]  = useState([])
   const [showMemories, setShowMemories] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [myName, setMyName] = useState('')
+  const [myName, setMyName] = useState(() => localStorage.getItem('myName') || '')
   const [pushEnabled, setPushEnabled] = useState(false)
   const [pushLoading, setPushLoading] = useState(false)
 
@@ -366,7 +366,7 @@ export default function App() {
         <div>
           <div style={{ fontSize: 17, fontWeight: 800 }}>🗺️ ทริปครอบครัว</div>
           <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>
-            สวัสดี {userName} · {trips.length} ทริป
+            สวัสดี {userName} · {trips.length} ทริป{myName ? ` · 🔔 ${myName}` : ''}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -553,7 +553,7 @@ export default function App() {
             <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>ฉันคือ</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
               {MEMBER_OPTIONS.map(m => (
-                <button key={m} onClick={() => { setMyName(m); setPushEnabled(false) }} style={{
+                <button key={m} onClick={() => { setMyName(m); localStorage.setItem('myName', m); setPushEnabled(false) }} style={{
                   padding: '8px 18px', borderRadius: 20, fontSize: 14, fontWeight: 700,
                   background: myName === m ? tripColor : 'rgba(255,255,255,0.06)',
                   color: myName === m ? '#000' : C.muted2,
