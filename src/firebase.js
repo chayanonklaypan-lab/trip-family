@@ -90,10 +90,10 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 export async function subscribePush(memberName) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return 'no_push_support'
+  const permission = await Notification.requestPermission()
+  if (permission !== 'granted') return 'permission_' + permission
   try {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false
-    const permission = await Notification.requestPermission()
-    if (permission !== 'granted') return false
     const reg = await navigator.serviceWorker.ready
     let sub = await reg.pushManager.getSubscription()
     if (!sub) {
@@ -103,10 +103,9 @@ export async function subscribePush(memberName) {
       })
     }
     await setDoc(doc(db, 'settings', 'pushSubs'), { [memberName]: sub.toJSON() }, { merge: true })
-    return true
+    return 'ok'
   } catch (e) {
-    console.error('Push subscribe error:', e)
-    return false
+    return e.message || String(e)
   }
 }
 

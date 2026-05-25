@@ -600,10 +600,10 @@ export default function App() {
                 onClick={async () => {
                   if (!myName) return
                   setPushLoading(true)
-                  const ok = await subscribePush(myName)
+                  const result = await subscribePush(myName)
                   setPushLoading(false)
-                  if (ok) setPushEnabled(true)
-                  else alert('ไม่สามารถเปิดการแจ้งเตือนได้ ลองอนุญาต notification ในการตั้งค่าเบราว์เซอร์')
+                  if (result === 'ok') setPushEnabled(true)
+                  else alert('Error: ' + result)
                 }}
                 style={{
                   width: '100%', padding: 14, borderRadius: 12, border: 'none',
