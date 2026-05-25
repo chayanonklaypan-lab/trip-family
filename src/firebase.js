@@ -31,7 +31,7 @@ export { onAuthStateChanged }
 
 // ── OpenWeatherMap ────────────────────────────────────────────
 // ขอ free API key ได้ที่ openweathermap.org
-const OPENWEATHER_KEY = 'YOUR_OPENWEATHER_API_KEY'
+const OPENWEATHER_KEY = import.meta.env.VITE_OPENWEATHER_KEY || ''
 
 const WX_ICONS = {
   '01': '☀️', '02': '🌤️', '03': '⛅', '04': '☁️',

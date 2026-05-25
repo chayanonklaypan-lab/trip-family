@@ -30,39 +30,64 @@ const TABS = [
 // ── Thai Date Picker ─────────────────────────────────────────
 const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 
-function ThaiDateInput({ value, onChange, style = {} }) {
+function DarkSelect({ value, onChange, options, placeholder, style = {} }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+  const selected = options.find(o => o.value === value)
+  return (
+    <div ref={ref} style={{ position: 'relative', ...style }}>
+      <button type="button" onClick={() => setOpen(o => !o)} style={{
+        width: '100%', padding: '10px 8px', textAlign: 'left',
+        background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+        borderRadius: 10, color: selected ? '#f1f5f9' : '#64748b',
+        fontSize: 14, fontFamily: 'Sarabun, sans-serif', cursor: 'pointer',
+      }}>
+        {selected ? selected.label : placeholder}
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+          background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)',
+          borderRadius: 10, zIndex: 9999, maxHeight: 220, overflowY: 'auto',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+        }}>
+          {options.map(opt => (
+            <div key={opt.value} onClick={() => { onChange(opt.value); setOpen(false) }}
+              style={{
+                padding: '10px 14px', cursor: 'pointer', fontSize: 14,
+                fontFamily: 'Sarabun, sans-serif',
+                color: opt.value === value ? '#a5b4fc' : '#f1f5f9',
+                background: opt.value === value ? 'rgba(99,102,241,0.18)' : 'transparent',
+                transition: 'background 0.1s',
+              }}
+              onMouseEnter={e => { if (opt.value !== value) e.currentTarget.style.background = 'rgba(255,255,255,0.07)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = opt.value === value ? 'rgba(99,102,241,0.18)' : 'transparent' }}
+            >{opt.label}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ThaiDateInput({ value, onChange }) {
   const [y, m, d] = value ? value.split('-') : ['', '', '']
-  const SS = {
-    padding: '10px 8px', background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10,
-    color: '#f1f5f9', fontSize: 14, fontFamily: 'Sarabun, sans-serif',
-    outline: 'none', appearance: 'none', cursor: 'pointer',
-    colorScheme: 'dark', ...style,
-  }
-  const update = (ny, nm, nd) => {
-    if (ny && nm && nd) onChange(`${ny}-${nm}-${nd}`)
-  }
+  const update = (ny, nm, nd) => { if (ny && nm && nd) onChange(`${ny}-${nm}-${nd}`) }
   const now = new Date().getFullYear()
+  const days   = Array.from({ length: 31 }, (_, i) => ({ value: String(i+1).padStart(2,'0'), label: String(i+1) }))
+  const months = MONTHS_TH.map((name, i) => ({ value: String(i+1).padStart(2,'0'), label: name }))
+  const years  = Array.from({ length: 5 }, (_, i) => ({ value: String(now+i), label: String(now+i+543) }))
   return (
     <div style={{ display: 'flex', gap: 6 }}>
-      <select value={d || ''} onChange={e => update(y, m, e.target.value)} style={{ ...SS, flex: 1 }}>
-        <option value="">วัน</option>
-        {Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0')).map(v => (
-          <option key={v} value={v}>{Number(v)}</option>
-        ))}
-      </select>
-      <select value={m || ''} onChange={e => update(y, e.target.value, d)} style={{ ...SS, flex: 2 }}>
-        <option value="">เดือน</option>
-        {MONTHS_TH.map((name, i) => (
-          <option key={i} value={String(i + 1).padStart(2, '0')}>{name}</option>
-        ))}
-      </select>
-      <select value={y || ''} onChange={e => update(e.target.value, m, d)} style={{ ...SS, flex: 2 }}>
-        <option value="">ปี (พ.ศ.)</option>
-        {Array.from({ length: 5 }, (_, i) => now + i).map(yr => (
-          <option key={yr} value={String(yr)}>{yr + 543}</option>
-        ))}
-      </select>
+      <DarkSelect value={d||''} onChange={v => update(y,m,v)} options={days}   placeholder="วัน"      style={{ flex: 1 }} />
+      <DarkSelect value={m||''} onChange={v => update(y,v,d)} options={months} placeholder="เดือน"    style={{ flex: 2 }} />
+      <DarkSelect value={y||''} onChange={v => update(v,m,d)} options={years}  placeholder="ปี (พ.ศ.)" style={{ flex: 2 }} />
     </div>
   )
 }
