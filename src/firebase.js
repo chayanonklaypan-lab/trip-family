@@ -79,32 +79,51 @@ export async function fetchWeather(city, startDate, days) {
   }
 }
 
-export async function saveLineToken(memberName, token) {
-  await setDoc(doc(db, 'settings', 'lineTokens'), { [memberName]: token }, { merge: true })
+// ── Web Push Notifications ────────────────────────────────────
+const VAPID_PUBLIC_KEY = 'BFrZUYWJ8ecnePFiP5VMpdfK3MY61j74GqjhhuWRPVnXuY6_MuM3uZ5vrIKIVWiGe04NociqOmfON4erzaFrRvc'
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const raw = window.atob(base64)
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)))
 }
 
-export async function getLineTokens() {
-  const snap = await getDoc(doc(db, 'settings', 'lineTokens'))
-  return snap.exists() ? snap.data() : {}
-}
-
-export async function notifyTripMembers(trip, actorName, message) {
+export async function subscribePush(memberName) {
   try {
-    const tokens = await getLineTokens()
-    const recipients = (trip.members || []).filter(m => m !== actorName)
-    await Promise.all(
-      recipients
-        .filter(m => tokens[m])
-        .map(m =>
-          fetch('/api/line-notify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: tokens[m], message }),
-          })
-        )
-    )
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false
+    const permission = await Notification.requestPermission()
+    if (permission !== 'granted') return false
+    const reg = await navigator.serviceWorker.ready
+    let sub = await reg.pushManager.getSubscription()
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      })
+    }
+    await setDoc(doc(db, 'settings', 'pushSubs'), { [memberName]: sub.toJSON() }, { merge: true })
+    return true
   } catch (e) {
-    console.error('LINE notify error:', e)
+    console.error('Push subscribe error:', e)
+    return false
+  }
+}
+
+export async function notifyTripMembers(trip, actorName, body) {
+  try {
+    const snap = await getDoc(doc(db, 'settings', 'pushSubs'))
+    const subs = snap.exists() ? snap.data() : {}
+    const recipients = (trip.members || []).filter(m => m !== actorName)
+    const subscriptions = recipients.map(m => subs[m]).filter(Boolean)
+    if (!subscriptions.length) return
+    await fetch('/api/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscriptions, title: trip.name, body }),
+    })
+  } catch (e) {
+    console.error('Push notify error:', e)
   }
 }
 

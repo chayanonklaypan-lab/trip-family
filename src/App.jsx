@@ -4,7 +4,7 @@ import {
   listenTrips, listenHotels, listenPlaces, listenExpenses,
   listenTimeline, listenChecklist,
   createTrip, logAction, saveUser, getCarOdometer, listenMemories,
-  saveLineToken, getLineTokens,
+  subscribePush,
 } from './firebase.js'
 import {
   CAR_OPTIONS, MEMBER_OPTIONS, STATUS_OPTIONS, STATUS_CONFIG,
@@ -248,8 +248,9 @@ export default function App() {
   const [memories,  setMemories]  = useState([])
   const [showMemories, setShowMemories] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [lineTokens, setLineTokens] = useState({})
-  const [tokenInputs, setTokenInputs] = useState({})
+  const [myName, setMyName] = useState('')
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushLoading, setPushLoading] = useState(false)
 
   const trip = trips.find(t => t.id === selectedId)
 
@@ -283,11 +284,6 @@ export default function App() {
     return listenMemories(setMemories)
   }, [user])
 
-  // ── LINE Notify tokens ─────────────────────────────────────
-  useEffect(() => {
-    if (!user) return
-    getLineTokens().then(t => { setLineTokens(t); setTokenInputs(t) })
-  }, [user])
 
   // ── Subcollections listener ────────────────────────────────
   useEffect(() => {
@@ -549,57 +545,57 @@ export default function App() {
             maxHeight: '85vh', overflowY: 'auto',
             border: '1px solid rgba(255,255,255,0.1)', borderBottom: 'none',
           }}>
-            <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 6 }}>⚙️ ตั้งค่า LINE Notify</div>
-            <div style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>
-              รับ token ได้ที่{' '}
-              <span style={{ color: '#60a5fa' }}>notify.line.me</span>
-              {' '}→ Generate token
+            <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 6 }}>🔔 ตั้งค่าการแจ้งเตือน</div>
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>
+              เลือกชื่อของคุณ แล้วกดเปิดการแจ้งเตือนบนเครื่องนี้
             </div>
-            {MEMBER_OPTIONS.map(member => (
-              <div key={member} style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 13, color: C.muted2, marginBottom: 6, fontWeight: 600 }}>
-                  {member}
-                  {lineTokens[member] && (
-                    <span style={{ marginLeft: 8, fontSize: 11, color: '#10b981' }}>✓ เชื่อมแล้ว</span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    type="text"
-                    placeholder="วาง LINE Notify token ที่นี่"
-                    value={tokenInputs[member] || ''}
-                    onChange={e => setTokenInputs(t => ({ ...t, [member]: e.target.value }))}
-                    style={{
-                      flex: 1, padding: '10px 12px',
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      borderRadius: 10, color: '#f1f5f9', fontSize: 13,
-                      fontFamily: 'Sarabun, sans-serif', outline: 'none',
-                    }}
-                  />
-                  <button
-                    onClick={async () => {
-                      const token = (tokenInputs[member] || '').trim()
-                      if (!token) return
-                      await saveLineToken(member, token)
-                      setLineTokens(t => ({ ...t, [member]: token }))
-                    }}
-                    style={{
-                      padding: '10px 14px', borderRadius: 10, border: 'none',
-                      background: tripColor, color: '#000',
-                      fontWeight: 700, fontSize: 13, cursor: 'pointer',
-                      fontFamily: 'Sarabun, sans-serif', flexShrink: 0,
-                    }}
-                  >บันทึก</button>
-                </div>
-              </div>
-            ))}
+
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>ฉันคือ</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+              {MEMBER_OPTIONS.map(m => (
+                <button key={m} onClick={() => { setMyName(m); setPushEnabled(false) }} style={{
+                  padding: '8px 18px', borderRadius: 20, fontSize: 14, fontWeight: 700,
+                  background: myName === m ? tripColor : 'rgba(255,255,255,0.06)',
+                  color: myName === m ? '#000' : C.muted2,
+                  border: 'none', cursor: 'pointer', fontFamily: 'Sarabun, sans-serif',
+                }}>{m}</button>
+              ))}
+            </div>
+
+            {pushEnabled ? (
+              <div style={{
+                background: '#10b98120', border: '1px solid #10b98140',
+                borderRadius: 12, padding: '14px', textAlign: 'center',
+                fontSize: 14, color: '#10b981', fontWeight: 700,
+              }}>✅ เปิดการแจ้งเตือนสำหรับ {myName} แล้ว!</div>
+            ) : (
+              <button
+                disabled={!myName || pushLoading}
+                onClick={async () => {
+                  if (!myName) return
+                  setPushLoading(true)
+                  const ok = await subscribePush(myName)
+                  setPushLoading(false)
+                  if (ok) setPushEnabled(true)
+                  else alert('ไม่สามารถเปิดการแจ้งเตือนได้ ลองอนุญาต notification ในการตั้งค่าเบราว์เซอร์')
+                }}
+                style={{
+                  width: '100%', padding: 14, borderRadius: 12, border: 'none',
+                  background: myName ? tripColor : 'rgba(255,255,255,0.08)',
+                  color: myName ? '#000' : C.muted,
+                  fontWeight: 800, fontSize: 15, cursor: myName ? 'pointer' : 'default',
+                  fontFamily: 'Sarabun, sans-serif',
+                }}
+              >{pushLoading ? '⏳ กำลังเปิด...' : '🔔 เปิดการแจ้งเตือนบนเครื่องนี้'}</button>
+            )}
+
             <div style={{
-              background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.2)',
-              borderRadius: 12, padding: '10px 14px', fontSize: 12, color: '#93c5fd', marginTop: 8,
+              background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.15)',
+              borderRadius: 12, padding: '10px 14px', fontSize: 12, color: '#93c5fd', marginTop: 16,
             }}>
-              💡 แต่ละคนต้องเข้า notify.line.me แล้ว Generate token ให้ตัวเอง แล้วส่ง token มาให้ใส่ที่นี่
+              💡 แต่ละเครื่องต้องทำแค่ครั้งเดียว — เมื่อมีคนเพิ่มที่พัก สถานที่ หรือค่าใช้จ่าย จะแจ้งเตือนทุกเครื่องที่เปิดไว้อัตโนมัติ
             </div>
+
             <button onClick={() => setShowSettings(false)} style={{
               width: '100%', marginTop: 16, padding: 12,
               background: 'rgba(255,255,255,0.05)', color: C.muted2,
