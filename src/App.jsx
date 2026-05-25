@@ -73,7 +73,7 @@ function CreateModal({ onClose, onSave, color: defaultColor, uid, editData }) {
   const [form, setForm] = useState(editData ? {
     name: editData.name || '', img: editData.img || '✈️', color: editData.color || defaultColor || '#6366f1',
     start: editData.dates?.start || '', end: editData.dates?.end || '',
-    location: editData.location || '', members: editData.members || [],
+    location: editData.location || '', members: (editData.members || []).filter(m => MEMBER_OPTIONS.includes(m)),
     carId: editData.car?.id || 'mg5', distance: editData.distance || '',
     fuelPrice: editData.fuelPrice || 42, budgetTotal: editData.budgetTotal || '',
     status: editData.status || 'วางแผน',
